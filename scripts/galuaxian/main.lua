@@ -8,7 +8,10 @@ local settings = {
 }
 local targetSideMotionAmplitude = 2 -- better not make it bigger, otherwise targets will start to teleport side to side every other frame
 
+
 -- Program
+local icon = lcd.loadMask("icon.png")                      -- icon
+local LCD_W, LCD_H = 0, 0
 local shipPosition = {x = 0, y = 0}
 local SCALE = 1
 local actionAreaWidthStart = 0
@@ -34,6 +37,21 @@ local menuItemsCount = 4
 local menuPosition = 0
 local menuPadding = 2
 local menuOpened = false -- dirty hack to avoid EVT_ENTER_BREAK trigger settings change on initial menu open
+
+local BOLD = FONT_BOLD
+local MIDSIZE = FONT_STD
+local SMLSIZE = FONT_S
+local BLINK = 0
+local INVERS = 0
+
+local function getTime()
+  return os.clock()
+end
+
+local function getValue(name)
+  -- compat layer to return stick positions
+  return 0
+end
 
 -- Returns color flag
 local function getActiveColor(accent)
@@ -99,7 +117,13 @@ local function initBitmaps()
   target = Bitmap.open('./IMAGES/target.png')
 end
 
-local function init_func()
+local function create()
+
+  LCD_W, LCD_H = lcd.getWindowSize()
+
+  actionAreaHeightStart = LCD_H * 0.25
+
+
   pcall(initBitmaps)
 
   bestResult = loadBestResult()
@@ -438,14 +462,17 @@ local function renderMenu(event)
   lcd.drawRectangle(0, 11 + 11 * menuPosition, LCD_W, 12, SOLID) -- selected field frame
 end
 
-local function run_func(event)
+
+
+
+local function wakeup(event)
   shipPosition.x = mapInputToActionAreaPosition(getValue('ail'), actionAreaWidthStart, actionAreaWidthEnd) -- roll (left-right)
   shipPosition.y = mapInputToActionAreaPosition(getValue('ele') * -1, actionAreaHeightStart, actionAreaHeightEnd) -- pitch (up/down)
   currentTime = getTime()
   timerValue = (currentTime - initTime) / 100 + 1
 
   if gameOver == true then
-    lcd.clear()
+    lcd.invalidate()
     drawBackground()
 
     if not menuPage then
@@ -494,7 +521,7 @@ local function run_func(event)
     end
   end
 
-  lcd.clear()
+  lcd.invalidate()
   drawBackground()
 
   lcd.drawText(1, 1,string.format("TOTAL HITS:  %.0f", hits), INVERS)
@@ -508,4 +535,9 @@ local function run_func(event)
   return 0
 end
 
-return { init=init_func, run=run_func }
+
+local function init()
+  system.registerSystemTool({name="Galuaxian", icon=icon, create=create, wakeup=wakeup, event=event, paint=paint})
+end
+
+return {init = init}
